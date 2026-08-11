@@ -22,11 +22,23 @@ Model backend is flexible — OpenHands routes LLM calls through LiteLLM, so we 
 
 ## 3. Backend Deployment (reused, not built)
 
-- Self-host OpenHands per `SELF_HOSTING.md` on a cloud VM.
-- Candidate free/cheap hosting:
-  - Oracle Cloud Free Tier (always-free ARM VM) — run backend + Docker sandbox.
-  - E2B (free hobby credits) as an alternative/supplemental sandbox provider if not self-hosting Docker directly.
+- Self-host OpenHands per `SELF_HOSTING.md`.
 - Configure LiteLLM model routing to Gemini and/or GPT APIs (API keys supplied by us).
+
+### 3.1 Hosting evaluation (updated Aug 2026)
+
+Constraint: no ID/credit-card verification (ruled out anything requiring card-based identity checks).
+
+| Option | Findings | Verdict |
+|---|---|---|
+| **Fly.io** | Free tier removed for new accounts in 2024. New signups get a 2-hour or 7-day trial only, then pay-as-you-go (~$2-5/mo minimum for an always-on shared VM). Requires a card. | Ruled out — no real free tier, plus a card requirement. |
+| **Render** | Genuine permanent free tier, no card required. 750 free instance-hours/month, Docker supported. BUT: free web services are capped at 512MB RAM / 0.1 CPU and sleep after 15 min inactivity (30-60s cold start on wake). Not enough headroom to run the OpenHands controller *and* spawn Docker-in-Docker sandbox containers per conversation. | Ruled out as primary backend host. Could still serve a lightweight secondary role later (e.g. webhook/status endpoint). |
+| **Oracle Cloud Free Tier** | Genuinely generous always-free ARM VM (4 OCPU / 24GB RAM possible) — would easily fit backend + sandbox. BUT requires a valid credit/debit card for identity verification (no prepaid/virtual/PIN debit cards accepted), plus periodic card-validity holds. Ampere A1 capacity can also be regionally unavailable, and idle instances risk reclaim. | Ruled out — card/ID verification is a hard blocker for us. |
+| **Google Cloud Run free tier** | Free tier exists but generally requires billing/card setup to activate compute, similar issue to Oracle. Not fully verified. | Likely blocked too — deprioritized, revisit only if card constraint changes. |
+| **E2B (sandbox-only, not full backend)** | Free hobby tier gives a one-time $100 credit, sessions capped at 1 hour. Useful only as a supplemental sandbox execution layer, not a place to run the OpenHands controller itself. | Possible supplemental piece, not primary hosting. |
+| **Self-host on owned hardware (spare laptop / Raspberry Pi / home server) + Cloudflare Tunnel** | No card, no ID verification, full control over RAM/CPU for real Docker-in-Docker sandboxing. Cloudflare Tunnel is free and gives a public HTTPS endpoint without exposing a home IP or needing port forwarding. Tradeoffs: uptime/reliability depends on our own hardware and home internet; no vendor SLA. | **Current recommendation** — sidesteps the ID/card blocker entirely and is genuinely free. |
+
+**Decision:** Primary hosting plan is self-hosted OpenHands (backend + Docker sandbox) on owned hardware, exposed via a free Cloudflare Tunnel. Revisit managed cloud options later if the card/ID constraint changes or if home-hardware reliability becomes a problem.
 - Note: OpenHands is transitioning from a V0 (FastAPI + Socket.IO, deprecated ~Apr 2026) to a V1 app_server architecture. Plan should target the current V1 API surface — verify against live docs before implementation, not from training knowledge.
 - Confirm current REST/WebSocket endpoint shapes: conversations, bash, files, events (per OpenHands Agent Server docs).
 - API key based auth for client <-> server.
